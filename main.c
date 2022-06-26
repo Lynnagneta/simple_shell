@@ -1,90 +1,73 @@
-#include "shell.h"
+#include "holberton.h"
 
 /**
- * main - Simple Shell (Hsh)
- * @argc: Argument Count
- * @argv:Argument Value
- * Return: Exit Value By Status
- */
-
-int main(__attribute__((unused)) int argc, char **argv)
-{
-	char *input, **cmd;
-	int counter = 0, statue = 1, st = 0;
-
-	if (argv[1] != NULL)
-		read_file(argv[1], argv);
-	signal(SIGINT, signal_to_handel);
-	while (statue)
-	{
-		counter++;
-		if (isatty(STDIN_FILENO))
-			prompt();
-		input = _getline();
-		if (input[0] == '\0')
-		{
-			continue;
-		}
-		history(input);
-		cmd = parse_cmd(input);
-		if (_strcmp(cmd[0], "exit") == 0)
-		{
-			exit_bul(cmd, input, argv, counter);
-		}
-		else if (check_builtin(cmd) == 0)
-		{
-			st = handle_builtin(cmd, st);
-			free_all(cmd, input);
-			continue;
-		}
-		else
-		{
-			st = check_cmd(cmd, input, counter, argv);
-
-		}
-		free_all(cmd, input);
-	}
-	return (statue);
-}
-/**
- * check_builtin - check builtin
+ * free_data - frees data structure
  *
- * @cmd:command to check
- * Return: 0 Succes -1 Fail
+ * @datash: data structure
+ * Return: no return
  */
-int check_builtin(char **cmd)
+void free_data(data_shell *datash)
 {
-	bul_t fun[] = {
-		{"cd", NULL},
-		{"help", NULL},
-		{"echo", NULL},
-		{"history", NULL},
-		{NULL, NULL}
-	};
-	int i = 0;
-		if (*cmd == NULL)
+	unsigned int i;
+
+	for (i = 0; datash->_environ[i]; i++)
 	{
-		return (-1);
+		free(datash->_environ[i]);
 	}
 
-	while ((fun + i)->command)
-	{
-		if (_strcmp(cmd[0], (fun + i)->command) == 0)
-			return (0);
-		i++;
-	}
-	return (-1);
+	free(datash->_environ);
+	free(datash->pid);
 }
+
 /**
- * creat_envi - Creat Array of Enviroment Variable
- * @envi: Array of Enviroment Variable
- * Return: Void
+ * set_data - Initialize data structure
+ *
+ * @datash: data structure
+ * @av: argument vector
+ * Return: no return
  */
-void creat_envi(char **envi)
+void set_data(data_shell *datash, char **av)
 {
-	int i;
+	unsigned int i;
+
+	datash->av = av;
+	datash->input = NULL;
+	datash->args = NULL;
+	datash->status = 0;
+	datash->counter = 1;
 
 	for (i = 0; environ[i]; i++)
-		envi[i] = _strdup(environ[i]);
-	envi[i] = NULL;
+		;
+
+	datash->_environ = malloc(sizeof(char *) * (i + 1));
+
+	for (i = 0; environ[i]; i++)
+	{
+		datash->_environ[i] = _strdup(environ[i]);
+	}
+
+	datash->_environ[i] = NULL;
+	datash->pid = aux_itoa(getpid());
+}
+
+/**
+ * main - Entry point
+ *
+ * @ac: argument count
+ * @av: argument vector
+ *
+ * Return: 0 on success.
+ */
+int main(int ac, char **av)
+{
+	data_shell datash;
+	(void) ac;
+
+	signal(SIGINT, get_sigint);
+	set_data(&datash, av);
+	shell_loop(&datash);
+	free_data(&datash);
+	if (datash.status < 0)
+		return (255);
+	return (datash.status);
 }
